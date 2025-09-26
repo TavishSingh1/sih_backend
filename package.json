@@ -1,26 +1,17 @@
 {
-  "name": "sih(1)",
+  "name": "sih-backend",
   "version": "1.0.0",
-  "description": "��#\u0000 \u0000s\u0000i\u0000h\u00002\u00000\u00002\u00005\u0000\r\u0000 \u0000",
+  "description": "SIH backend",
   "main": "server.js",
+  "type": "commonjs",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1",
     "start": "node server.js"
   },
-  "repository": {
-    "type": "git",
-    "url": "git+https://github.com/TavishSingh1/sih2025.git"
-  },
-  "keywords": [],
-  "author": "",
-  "license": "ISC",
-  "type": "commonjs",
-  "bugs": {
-    "url": "https://github.com/TavishSingh1/sih2025/issues"
-  },
-  "homepage": "https://github.com/TavishSingh1/sih2025#readme",
   "dependencies": {
-    "body-parser": "^2.2.0",
-    "express": "^5.1.0"
+    "cors": "^2.8.5",
+    "express": "^4.19.2"
+  },
+  "engines": {
+    "node": ">=18 <23"
   }
 }
