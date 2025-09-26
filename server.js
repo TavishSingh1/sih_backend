@@ -3,60 +3,54 @@ const express = require("express");
 const cors = require("cors");
 
 const app = express();
-const port = process.env.PORT || 5000; // Render injects PORT
+const port = process.env.PORT || 5000;
 
-// --- Middleware ---
-app.use(cors()); // Allow all origins; lock down later if needed
-app.use(express.json({ limit: "256kb" })); // parse JSON
+// --- CORS (allow dev + prod) ---
+const ALLOWED_ORIGINS = [
+  "http://localhost:3000",
+  "http://localhost:5173",
+];
+app.use(cors({
+  origin: (origin, cb) => {
+    if (!origin) return cb(null, true); // allow curl/postman
+    if (ALLOWED_ORIGINS.includes(origin)) return cb(null, true);
+    // fallback: allow all during bring-up (uncomment if needed)
+    // return cb(null, true);
+    return cb(new Error("Not allowed by CORS"));
+  },
+  methods: ["GET","POST","OPTIONS"],
+  allowedHeaders: ["Content-Type","Accept"],
+  credentials: false,
+}));
+app.options("*", cors()); // preflight for ALL
 
-// Canonical zones for your 9 cards
+app.use(express.json({ limit: "256kb" }));
+
 const ZONES = Array.from({ length: 9 }, (_, i) => `zone${i + 1}`);
-
-// In-memory store: { zone: { temperature, humidity, moisture, espZone, timestamp } }
 const espData = Object.create(null);
 
-// --- Health ---
-app.get("/", (_req, res) => {
-  res.type("text/plain").send("OK");
-});
+app.get("/", (_req, res) => res.type("text/plain").send("OK"));
 
-// --- POST /data -> upsert latest reading for a zone ---
 app.post("/data", (req, res) => {
   const { temperature, humidity, moisture, espZone } = req.body || {};
+  if (!espZone) return res.status(400).json({ error: "espZone is required" });
 
-  if (!espZone) {
-    return res.status(400).json({ error: "espZone is required" });
-  }
-
-  // Coerce to numbers if strings come in
   const t = temperature !== undefined ? Number(temperature) : undefined;
   const h = humidity !== undefined ? Number(humidity) : undefined;
   const m = moisture !== undefined ? Number(moisture) : undefined;
 
-  espData[espZone] = {
-    temperature: t,
-    humidity: h,
-    moisture: m,
-    espZone,
-    timestamp: Date.now(),
-  };
-
+  espData[espZone] = { temperature: t, humidity: h, moisture: m, espZone, timestamp: Date.now() };
   console.log("Received from ESP:", espData[espZone]);
-  return res.json({ message: "Data stored successfully", received: espData[espZone] });
+  res.json({ message: "Data stored successfully", received: espData[espZone] });
 });
 
-// --- GET /data/:espZone -> fetch latest for that zone ---
 app.get("/data/:espZone", (req, res) => {
   const zone = req.params.espZone;
   const data = espData[zone];
-
-  if (!data) {
-    return res.status(404).json({ error: "No data found for this espZone" });
-  }
-  return res.json(data);
+  if (!data) return res.status(404).json({ error: "No data found for this espZone" });
+  res.json(data);
 });
 
-// --- OPTIONAL: GET /data -> fetch all zones in one go (nice for debugging) ---
 app.get("/data", (_req, res) => {
   const payload = ZONES.map((z) => espData[z] || { error: "No data found for this espZone", espZone: z });
   res.json(payload);
